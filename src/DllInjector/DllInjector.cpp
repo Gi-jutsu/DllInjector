@@ -27,6 +27,7 @@ int DllInjector::getProcessId(const std::string &name) {
 bool DllInjector::injectDll(const std::string &processName, const std::string &dllPath) {
     DWORD pid = this->getProcessId(processName);
 
+    std::cout << "[INFO] Retieving process PID by Name ..." << pid << std::endl;
     if (pid == 0) {
         std::cout << "[ERROR] No process found with name: " << processName << std::endl;
         return false;
@@ -49,7 +50,7 @@ bool DllInjector::injectDll(const std::string &processName, const std::string &d
         return false;
     }
 
-    std::cout << "[INFO] Writing dllPath size in target process memory." << std::endl;
+    std::cout << "[INFO] Writing dllPath size in target process memory." << pDllPath << std::endl;
 
     int isWriteSuccess = WriteProcessMemory(hProcess, pDllPath, dllPath.c_str(), dllSize, 0);
     if (isWriteSuccess == 0) {
@@ -59,18 +60,17 @@ bool DllInjector::injectDll(const std::string &processName, const std::string &d
 
     std::cout << "[INFO] Creating remote thread in target process" << std::endl;
 
-    LPTHREAD_START_ROUTINE pThreadStartRoutine = (LPTHREAD_START_ROUTINE) GetProcAddress(GetModuleHandleA("Kernel32.dll"), "LoadLibraryA");
-    HANDLE hThread = CreateRemoteThread(hProcess, 0, 0, pThreadStartRoutine, pDllPath, 0, 0);
+    DWORD  threadId;
+    LPTHREAD_START_ROUTINE pThreadStartRoutine = (LPTHREAD_START_ROUTINE) GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+    HANDLE hThread = CreateRemoteThread(hProcess, 0, 0, pThreadStartRoutine, pDllPath, 0, &threadId);
 
     if (hThread == NULL) {
         std::cout << "[ERROR] Fail to create remote thread in target process." << std::endl;
         return false;
     }
 
-    std::cout << "[INFO] DLL Successfully Injected." << std::endl;
+    std::cout << "[INFO] DLL Successfully Injected. Thread ID: " << threadId << std::endl;
     std::cout << "[INFO] Executing DLL in target process." << std::endl;
-
-    WaitForSingleObject(hThread, INFINITE);
 
     return true;
 }
